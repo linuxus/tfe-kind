@@ -63,8 +63,6 @@ openssl version
 
 ## Architecture
 
-> 📖 **For detailed architecture diagrams, data flow, and component breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
-
 ### Overview Diagrams
 
 | Diagram | Preview | Highlights |
