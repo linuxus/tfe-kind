@@ -63,6 +63,10 @@ openssl version
 
 ## Architecture
 
+> 📖 **For detailed architecture diagrams, data flow, and component breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+
+### Overview Diagram
+
 ```
 ┌─────────────────────────────────────────────────┐
 │          Local Machine (macOS)                  │
@@ -92,6 +96,14 @@ openssl version
                │
           Browser: https://tfe.local:8443
 ```
+
+### Rendered Diagrams
+
+| Diagram | Preview | Highlights |
+| --- | --- | --- |
+| **Overview** | ![TFE on Kind - Overview](docs/images/tfe-architecture-Overview.png) | Shows how TFE, PostgreSQL, secrets, PVCs, and the access path fit inside the Kind namespace on your local macOS host. |
+| **Components** | ![TFE on Kind - Components](docs/images/tfe-architecture-Components.png) | Breaks the stack into layers (automation scripts, services, pods, storage) and calls out which manifest or script owns each resource. |
+| **Data Flow** | ![TFE on Kind - Data Flow](docs/images/tfe-architecture-Data%20Flow.png) | Focuses on runtime traffic: browser ↔ port-forward ↔ TFE service, TFE ↔ PostgreSQL, and pods ↔ PVCs backed by the local-path provisioner. |
 
 ### Components
 
