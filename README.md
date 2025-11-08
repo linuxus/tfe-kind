@@ -65,39 +65,7 @@ openssl version
 
 > 📖 **For detailed architecture diagrams, data flow, and component breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
-### Overview Diagram
-
-```
-┌─────────────────────────────────────────────────┐
-│          Local Machine (macOS)                  │
-│  ┌───────────────────────────────────────────┐  │
-│  │     Kind Kubernetes Cluster               │  │
-│  │  ┌─────────────────────────────────────┐  │  │
-│  │  │  Namespace: terraform-enterprise    │  │  │
-│  │  │                                     │  │  │
-│  │  │  ┌──────────────┐  ┌─────────────┐ │  │  │
-│  │  │  │ TFE Pod      │  │ PostgreSQL  │ │  │  │
-│  │  │  │              │◄─┤ Pod         │ │  │  │
-│  │  │  │ 2-4 CPU      │  │             │ │  │  │
-│  │  │  │ 4-8Gi RAM    │  │ 1-2 CPU     │ │  │  │
-│  │  │  │              │  │ 2-4Gi RAM   │ │  │  │
-│  │  │  └──────┬───────┘  └──────┬──────┘ │  │  │
-│  │  │         │                 │        │  │  │
-│  │  │    ┌────▼────┐      ┌────▼────┐   │  │  │
-│  │  │    │ TFE PVC │      │ PG PVC  │   │  │  │
-│  │  │    │  20Gi   │      │  10Gi   │   │  │  │
-│  │  │    └─────────┘      └─────────┘   │  │  │
-│  │  └─────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────┘  │
-│              ▲                                   │
-│              │ Port Forward                      │
-│              │ localhost:8443 → TFE:443         │
-└──────────────┼───────────────────────────────────┘
-               │
-          Browser: https://tfe.local:8443
-```
-
-### Rendered Diagrams
+### Overview Diagrams
 
 | Diagram | Preview | Highlights |
 | --- | --- | --- |
