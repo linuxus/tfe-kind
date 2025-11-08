@@ -1,0 +1,123 @@
+# Terraform Enterprise Helm Chart Values
+# Customized for Kind Kubernetes cluster deployment
+# Note: HashiCorp provides TFE as a Helm chart in their official repository
+
+# Global settings
+global:
+  storageClass: "standard"
+
+# TFE Application Configuration
+image:
+  repository: "images.releases.hashicorp.com/hashicorp/terraform-enterprise"
+  tag: ""  # Use latest GA version
+  pullPolicy: IfNotPresent
+
+# Replica count - single instance for dev
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 443
+  targetPort: 443
+  annotations: {}
+
+# TFE application settings
+tfe:
+  hostname: "tfe.local"
+  
+  # TLS Configuration
+  tls:
+    enabled: true
+    certificateSecret: "tfe-tls"
+    certFile: "/etc/ssl/private/tfe/tls.crt"
+    keyFile: "/etc/ssl/private/tfe/tls.key"
+  
+  # License
+  license:
+    secret: "tfe-license"
+    secretKey: "license"
+  
+  # Operational mode
+  operationalMode: "external"
+  
+  # Metrics
+  metrics:
+    enabled: true
+
+# Database configuration
+database:
+  host: "postgres.terraform-enterprise.svc.cluster.local"
+  port: 5432
+  name: "tfe"
+  user: "terraform"
+  passwordSecretName: "postgres-credentials"
+  passwordSecretKey: "password"
+  sslMode: "disable"
+
+# Storage
+storage:
+  type: "disk"
+  capacity: "20Gi"
+  existingClaim: "tfe-data-pvc"
+
+# Resources
+resources:
+  requests:
+    cpu: "2"
+    memory: "4Gi"
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+
+# Health checks
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 300
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Security context
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+# Service account
+serviceAccount:
+  create: true
+  name: "tfe-service-account"
+
+# RBAC
+rbac:
+  create: true
+
+# Ingress disabled
+ingress:
+  enabled: false
+
+# Additional environment variables
+env:
+  TFE_HOSTNAME: "tfe.local"
+  TFE_HTTP_PORT: "80"
+  TFE_HTTPS_PORT: "443"
+  TFE_DATABASE_HOST: "postgres.terraform-enterprise.svc.cluster.local"
+  TFE_DATABASE_NAME: "tfe"
+  TFE_DATABASE_USER: "terraform"
+  TFE_DATABASE_PARAMETERS: "sslmode=disable"
+  TFE_DISK_PATH: "/var/lib/terraform-enterprise"
+  TFE_OPERATIONAL_MODE: "external"
+  TFE_LOG_LEVEL: "info"
+  TFE_VAULT_DISABLE_MLOCK: "true"
