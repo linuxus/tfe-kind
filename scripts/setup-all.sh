@@ -195,17 +195,6 @@ else
 fi
 echo ""
 
-# Configure /etc/hosts
-echo "11. Configuring /etc/hosts..."
-if grep -q "tfe.local" /etc/hosts; then
-    echo "    ✓ tfe.local already in /etc/hosts"
-else
-    echo "    Adding tfe.local to /etc/hosts (requires sudo)..."
-    echo "127.0.0.1 tfe.local" | sudo tee -a /etc/hosts
-    echo "    ✓ /etc/hosts updated"
-fi
-echo ""
-
 # Show deployment status
 echo "========================================="
 echo "  Deployment Status"
@@ -234,7 +223,7 @@ echo "1. Start port forwarding:"
 echo "   ./scripts/port-forward.sh"
 echo ""
 echo "2. Access TFE in your browser:"
-echo "   https://tfe.local:8443"
+echo "   https://tfe.localtest.me:8443"
 echo ""
 echo "3. Accept the self-signed certificate warning"
 echo ""

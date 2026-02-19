@@ -7,7 +7,7 @@ set -e
 
 NAMESPACE="terraform-enterprise"
 SECRET_NAME="tfe-tls"
-HOSTNAME="tfe.local"
+HOSTNAME="tfe.localtest.me"
 CERT_DIR="/tmp/tfe-certs"
 
 echo "========================================="

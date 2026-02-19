@@ -24,7 +24,7 @@ This repository provides a production-ready deployment of Terraform Enterprise o
 - **Self-signed TLS Certificates**
 - **Port-forwarding access** (no ingress controller required)
 
-**Note:** This setup is optimized for local development and sandbox environments.
+**Note:** This setup is optimized for local development and sandbox environments. It uses `tfe.localtest.me` as the hostname, which resolves to `127.0.0.1` via public DNS — no `/etc/hosts` changes required.
 
 ## Prerequisites
 
@@ -78,7 +78,7 @@ openssl version
    - Runs as a StatefulSet/Deployment
    - Exposes HTTPS on port 443 (ClusterIP Service)
    - Uses self-signed TLS certificates
-   - Hostname: `tfe.local`
+   - Hostname: `tfe.localtest.me`
 
 2. **PostgreSQL Database**
    - Version: 14 (compatible with TFE)
@@ -156,17 +156,14 @@ kubectl create secret generic terraform-enterprise-env-secrets -n terraform-ente
 # 14. Restart TFE pod to pick up the secret
 kubectl delete pod -n terraform-enterprise -l app=terraform-enterprise
 
-# 15. Configure /etc/hosts
-echo "127.0.0.1 tfe.local" | sudo tee -a /etc/hosts
-
-# 16. Wait for TFE to be ready (5-10 minutes)
+# 15. Wait for TFE to be ready (5-10 minutes)
 kubectl wait --for=condition=ready pod -l app=terraform-enterprise -n terraform-enterprise --timeout=600s
 
-# 17. Start port forwarding
+# 16. Start port forwarding
 ./scripts/port-forward.sh
 
-# 18. Access TFE
-open https://tfe.local:8443
+# 17. Access TFE
+open https://tfe.localtest.me:8443
 ```
 
 ## Detailed Installation Steps
@@ -235,7 +232,7 @@ kubectl get secret redis-credentials -n terraform-enterprise
 
 ### Step 5: Generate TLS Certificates
 
-Create self-signed TLS certificates for `tfe.local`:
+Create self-signed TLS certificates for `tfe.localtest.me`:
 
 ```bash
 chmod +x manifests/secrets/create-tls-certs.sh
@@ -411,20 +408,7 @@ You can monitor the startup progress by watching the logs:
 kubectl logs -f -n terraform-enterprise -l app=terraform-enterprise
 ```
 
-### Step 15: Configure Local DNS
-
-Add `tfe.local` to your `/etc/hosts` file:
-
-```bash
-echo "127.0.0.1 tfe.local" | sudo tee -a /etc/hosts
-```
-
-Verify:
-```bash
-grep tfe.local /etc/hosts
-```
-
-### Step 16: Set Up Port Forwarding
+### Step 15: Set Up Port Forwarding
 
 Start port forwarding to access TFE:
 
@@ -441,10 +425,10 @@ This forwards `localhost:8443` → `tfe-service:443` in the cluster.
 
 ### Initial Setup
 
-1. Open your browser and navigate to: **https://tfe.local:8443**
+1. Open your browser and navigate to: **https://tfe.localtest.me:8443**
 
 2. You'll see a certificate warning (expected with self-signed certs):
-   - **Chrome/Edge:** Click "Advanced" → "Proceed to tfe.local (unsafe)"
+   - **Chrome/Edge:** Click "Advanced" → "Proceed to tfe.localtest.me (unsafe)"
    - **Firefox:** Click "Advanced" → "Accept the Risk and Continue"
    - **Safari:** Click "Show Details" → "visit this website"
 
@@ -467,7 +451,7 @@ Create your admin account during first-time setup. You'll be prompted to:
 ./scripts/port-forward.sh
 
 # Access TFE
-open https://tfe.local:8443
+open https://tfe.localtest.me:8443
 ```
 
 ## Configuration
@@ -479,7 +463,7 @@ The main configuration is in `helm/values.yaml`. Key settings:
 ```yaml
 # TFE Application Settings
 tfe:
-  hostname: "tfe.local"
+  hostname: "tfe.localtest.me"
   
 # Database Configuration
 database:
@@ -785,8 +769,6 @@ kubectl delete namespace terraform-enterprise
 # Delete cluster
 kind delete cluster --name tfe-cluster
 
-# Remove from /etc/hosts
-sudo sed -i '' '/tfe.local/d' /etc/hosts
 ```
 
 ## Additional Resources

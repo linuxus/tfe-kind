@@ -28,7 +28,7 @@
         <mxCell id="9" value="TFE Pod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=11;fontStyle=1;arcSize=10;" parent="1" vertex="1">
           <mxGeometry x="160" y="300" width="200" height="180" as="geometry" />
         </mxCell>
-        <mxCell id="10" value="Terraform Enterprise&#xa;&#xa;Resources:&#xa;2-4 CPU&#xa;4-8Gi RAM&#xa;&#xa;Hostname: tfe.local&#xa;Mode: External" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="10" value="Terraform Enterprise&#xa;&#xa;Resources:&#xa;2-4 CPU&#xa;4-8Gi RAM&#xa;&#xa;Hostname: tfe.localtest.me&#xa;Mode: External" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="170" y="330" width="180" height="140" as="geometry" />
         </mxCell>
         <mxCell id="11" value="PostgreSQL Pod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontSize=11;fontStyle=1;arcSize=12;" parent="1" vertex="1">
@@ -87,7 +87,7 @@
         <mxCell id="23" value="Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1" parent="1" vertex="1">
           <mxGeometry x="400" y="735" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="24" value="https://tfe.local:8443" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="24" value="https://tfe.localtest.me:8443" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="415" y="765" width="120" height="30" as="geometry" />
         </mxCell>
         <mxCell id="25" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d6b656;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="23" target="13" edge="1">
@@ -134,7 +134,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="30" value="DNS: /etc/hosts&#xa;127.0.0.1 tfe.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="30" value="DNS: localtest.me&#xa;resolves to 127.0.0.1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="560" y="740" width="120" height="50" as="geometry" />
         </mxCell>
       </root>
@@ -151,7 +151,7 @@
         <mxCell id="101" value="User Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" parent="1" vertex="1">
           <mxGeometry x="80" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="102" value="DNS Resolution&#xa;(/etc/hosts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+        <mxCell id="102" value="DNS Resolution&#xa;(localtest.me)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
           <mxGeometry x="80" y="200" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="103" value="Port Forward&#xa;kubectl" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
@@ -178,7 +178,7 @@
             <mxPoint x="450" y="350" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="110" value="https://tfe.local:8443" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="109" vertex="1" connectable="0">
+        <mxCell id="110" value="https://tfe.localtest.me:8443" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="109" vertex="1" connectable="0">
           <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
             <mxPoint x="61" as="offset" />
           </mxGeometry>
@@ -309,7 +309,7 @@
         <mxCell id="137" value="• PVC (20Gi)&#xa;• Deploy via Helm&#xa;• Mount secrets" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="780" y="380" width="110" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="138" value="• Port forward&#xa;• DNS (/etc/hosts)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="138" value="• Port forward&#xa;• DNS (localtest.me)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="780" y="450" width="110" height="40" as="geometry" />
         </mxCell>
       </root>
@@ -326,7 +326,7 @@
         <mxCell id="201" value="TFE Pod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=14;fontStyle=1;align=left;arcSize=4;" parent="1" vertex="1">
           <mxGeometry x="80" y="140" width="400" height="240" as="geometry" />
         </mxCell>
-        <mxCell id="202" value="Image: hashicorp/terraform-enterprise:latest&#xa;Replicas: 1&#xa;&#xa;Resources:&#xa;  Requests: 2 CPU, 4Gi RAM&#xa;  Limits: 4 CPU, 8Gi RAM&#xa;&#xa;Environment:&#xa;  TFE_HOSTNAME=tfe.local&#xa;  TFE_OPERATIONAL_MODE=external&#xa;  TFE_DATABASE_HOST=postgres.terraform-enterprise.svc&#xa;&#xa;Volumes:&#xa;  • TLS Certs: /etc/ssl/private/tfe/&#xa;  • License: /etc/terraform-enterprise/&#xa;  • Data: /var/lib/terraform-enterprise/ (20Gi PVC)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+        <mxCell id="202" value="Image: hashicorp/terraform-enterprise:latest&#xa;Replicas: 1&#xa;&#xa;Resources:&#xa;  Requests: 2 CPU, 4Gi RAM&#xa;  Limits: 4 CPU, 8Gi RAM&#xa;&#xa;Environment:&#xa;  TFE_HOSTNAME=tfe.localtest.me&#xa;  TFE_OPERATIONAL_MODE=external&#xa;  TFE_DATABASE_HOST=postgres.terraform-enterprise.svc&#xa;&#xa;Volumes:&#xa;  • TLS Certs: /etc/ssl/private/tfe/&#xa;  • License: /etc/terraform-enterprise/&#xa;  • Data: /var/lib/terraform-enterprise/ (20Gi PVC)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="90" y="160" width="380" height="160" as="geometry" />
         </mxCell>
         <mxCell id="203" value="PostgreSQL Pod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontSize=14;fontStyle=1;align=left;arcSize=6;" parent="1" vertex="1">
@@ -338,7 +338,7 @@
         <mxCell id="205" value="Secrets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;fontSize=14;fontStyle=1;align=left;arcSize=5;" parent="1" vertex="1">
           <mxGeometry x="560" y="140" width="400" height="230" as="geometry" />
         </mxCell>
-        <mxCell id="206" value="tfe-tls (kubernetes.io/tls):&#xa;  • tls.crt: Self-signed certificate&#xa;  • tls.key: Private key&#xa;  • Valid: 365 days&#xa;  • Hostname: tfe.local&#xa;&#xa;tfe-license (Opaque):&#xa;  • license: TFE license file content&#xa;  • Source: /Users/abdii/one-drive/Dev/Licenses/terraform.hclic&#xa;&#xa;postgres-credentials (Opaque):&#xa;  • password: PostgreSQL password&#xa;  • Default: terraform_password_change_me&#xa;  • Used by: TFE and PostgreSQL pods" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+        <mxCell id="206" value="tfe-tls (kubernetes.io/tls):&#xa;  • tls.crt: Self-signed certificate&#xa;  • tls.key: Private key&#xa;  • Valid: 365 days&#xa;  • Hostname: tfe.localtest.me&#xa;&#xa;tfe-license (Opaque):&#xa;  • license: TFE license file content&#xa;  • Source: /Users/abdii/one-drive/Dev/Licenses/terraform.hclic&#xa;&#xa;postgres-credentials (Opaque):&#xa;  • password: PostgreSQL password&#xa;  • Default: terraform_password_change_me&#xa;  • Used by: TFE and PostgreSQL pods" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="570" y="170" width="380" height="160" as="geometry" />
         </mxCell>
         <mxCell id="207" value="Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontSize=14;fontStyle=1;align=left;arcSize=4;" parent="1" vertex="1">
@@ -356,7 +356,7 @@
         <mxCell id="211" value="Access Configuration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontSize=14;fontStyle=1;align=left;arcSize=7;" parent="1" vertex="1">
           <mxGeometry x="80" y="620" width="400" height="200" as="geometry" />
         </mxCell>
-        <mxCell id="212" value="Port Forwarding:&#xa;  • Command: kubectl port-forward svc/tfe -n terraform-enterprise 8443:443&#xa;  • Maps: localhost:8443 → TFE:443&#xa;  • Script: scripts/port-forward.sh&#xa;  • Must remain running for access&#xa;&#xa;DNS Resolution:&#xa;  • File: /etc/hosts&#xa;  • Entry: 127.0.0.1 tfe.local&#xa;  • Purpose: TLS certificate validation&#xa;&#xa;URL: https://tfe.local:8443" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+        <mxCell id="212" value="Port Forwarding:&#xa;  • Command: kubectl port-forward svc/tfe -n terraform-enterprise 8443:443&#xa;  • Maps: localhost:8443 → TFE:443&#xa;  • Script: scripts/port-forward.sh&#xa;  • Must remain running for access&#xa;&#xa;DNS Resolution:&#xa;  • Domain: tfe.localtest.me&#xa;  • Resolves to: 127.0.0.1 via public DNS&#xa;  • Purpose: TLS certificate validation&#xa;&#xa;URL: https://tfe.localtest.me:8443" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="90" y="640" width="380" height="100" as="geometry" />
         </mxCell>
         <mxCell id="213" value="Deployment Automation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;fontSize=13;fontStyle=1" parent="1" vertex="1">

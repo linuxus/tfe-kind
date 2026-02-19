@@ -28,7 +28,7 @@ service:
 
 # TFE application settings
 tfe:
-  hostname: "tfe.local"
+  hostname: "tfe.localtest.me"
   
   # Operational mode
   operationalMode: "external"
@@ -90,7 +90,7 @@ ingress:
 
 env:
   variables:
-    TFE_HOSTNAME: "tfe.local"
+    TFE_HOSTNAME: "tfe.localtest.me"
     TFE_HTTP_PORT: "8080"
     TFE_HTTPS_PORT: "8443"
     TFE_ADMIN_HTTPS_PORT: "8446"
