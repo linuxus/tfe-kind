@@ -95,7 +95,7 @@ openssl version
 
 ```bash
 # 1. Clone this repository
-git clone https://github.com/abdi-ibrahim-2025/tfe-kind.git
+git clone https://github.com/linuxus/tfe-kind.git
 cd tfe-kind
 
 # 2. Create Kind cluster (if not already created)
