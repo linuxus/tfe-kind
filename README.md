@@ -99,18 +99,24 @@ git clone https://github.com/abdi-ibrahim-2025/tfe-kind.git
 cd tfe-kind
 
 # 2. Create Kind cluster (if not already created)
-kind create cluster --name tfe-cluster
+kind create cluster --name tfe-cluster --config kind-ha-cluster.yaml 
 
 # 3. Create namespace
 kubectl apply -f manifests/namespace.yaml
 
-# 4. Create TLS certificates
+# 4. Create PostgreSQL credentials secret
+./manifests/secrets/create-postgres-secret.sh
+
+# 5. Create Redis credentials secret
+./manifests/secrets/create-redis-secret.sh
+
+# 6. Create TLS certificates
 ./manifests/secrets/create-tls-certs.sh
 
-# 5. Create license secret
+# 7. Create license secret
 ./manifests/secrets/create-license-secret.sh
 
-# 6. Deploy PostgreSQL
+# 8. Deploy PostgreSQL
 kubectl apply -f manifests/postgres-pvc.yaml
 kubectl apply -f manifests/postgres-deployment.yaml
 kubectl apply -f manifests/postgres-service.yaml
@@ -118,21 +124,48 @@ kubectl apply -f manifests/postgres-service.yaml
 # Wait for PostgreSQL to be ready
 kubectl wait --for=condition=ready pod -l app=postgres -n terraform-enterprise --timeout=300s
 
-# 7. Deploy TFE using Helm
+# 9. Deploy Redis
+kubectl apply -f manifests/redis-pvc.yaml
+kubectl apply -f manifests/redis-statefulset.yaml
+kubectl apply -f manifests/redis-service.yaml
+
+# Wait for Redis to be ready
+kubectl wait --for=condition=ready pod -l app=redis -n terraform-enterprise --timeout=300s
+
+# 10. Create TFE Data PersistentVolumeClaim
+kubectl apply -f manifests/tfe-pvc.yaml
+
+# 11. Add HashiCorp Helm Repository
 helm repo add hashicorp https://helm.releases.hashicorp.com
 helm repo update
+
+# 12. Deploy TFE using Helm
 helm install tfe hashicorp/terraform-enterprise \
   -n terraform-enterprise \
   -f helm/values.yaml \
-  --wait
+  --wait \
+  --timeout 15m
 
-# 8. Configure /etc/hosts
+# 13. Create TFE Environment Secrets (workaround for Helm chart bug)
+# The Helm chart has a bug with secretKeyRefs, so we create this secret manually
+kubectl create secret generic terraform-enterprise-env-secrets -n terraform-enterprise \
+  --from-literal=TFE_LICENSE="$(kubectl get secret tfe-license -n terraform-enterprise -o jsonpath='{.data.license}' | base64 -d)" \
+  --from-literal=TFE_REDIS_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)" \
+  --from-literal=TFE_REDIS_SIDEKIQ_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)"
+
+# 14. Restart TFE pod to pick up the secret
+kubectl delete pod -n terraform-enterprise -l app=terraform-enterprise
+
+# 15. Configure /etc/hosts
 echo "127.0.0.1 tfe.local" | sudo tee -a /etc/hosts
 
-# 9. Start port forwarding
+# 16. Wait for TFE to be ready (5-10 minutes)
+kubectl wait --for=condition=ready pod -l app=terraform-enterprise -n terraform-enterprise --timeout=600s
+
+# 17. Start port forwarding
 ./scripts/port-forward.sh
 
-# 10. Access TFE
+# 18. Access TFE
 open https://tfe.local:8443
 ```
 
@@ -172,7 +205,35 @@ Verify:
 kubectl get namespace terraform-enterprise
 ```
 
-### Step 3: Generate TLS Certificates
+### Step 3: Create PostgreSQL Credentials Secret
+
+```bash
+chmod +x manifests/secrets/create-postgres-secret.sh
+./manifests/secrets/create-postgres-secret.sh
+```
+
+This script creates/updates the `postgres-credentials` secret that the StatefulSet needs to boot. Update the password in the script for anything beyond local dev.
+
+Verify:
+```bash
+kubectl get secret postgres-credentials -n terraform-enterprise
+```
+
+### Step 4: Create Redis Credentials Secret
+
+```bash
+chmod +x manifests/secrets/create-redis-secret.sh
+./manifests/secrets/create-redis-secret.sh
+```
+
+This script provisions the `redis-credentials` secret that both Redis and Terraform Enterprise need for authentication. Override the `REDIS_PASSWORD` env var before running for non-dev use.
+
+Verify:
+```bash
+kubectl get secret redis-credentials -n terraform-enterprise
+```
+
+### Step 5: Generate TLS Certificates
 
 Create self-signed TLS certificates for `tfe.local`:
 
@@ -188,7 +249,7 @@ Verify:
 kubectl get secret tfe-tls -n terraform-enterprise
 ```
 
-### Step 4: Create License Secret
+### Step 6: Create License Secret
 
 ```bash
 chmod +x manifests/secrets/create-license-secret.sh
@@ -202,7 +263,7 @@ Verify:
 kubectl get secret tfe-license -n terraform-enterprise
 ```
 
-### Step 5: Deploy PostgreSQL
+### Step 7: Deploy PostgreSQL
 
 ```bash
 # Create PersistentVolumeClaim
@@ -229,7 +290,47 @@ kubectl exec -it -n terraform-enterprise \
   -- psql -U terraform -d tfe -c '\l'
 ```
 
-### Step 6: Add HashiCorp Helm Repository
+### Step 8: Deploy Redis
+
+```bash
+# Create PersistentVolumeClaim
+kubectl apply -f manifests/redis-pvc.yaml
+
+# Deploy Redis
+kubectl apply -f manifests/redis-statefulset.yaml
+kubectl apply -f manifests/redis-service.yaml
+
+# Wait for Redis to be ready
+kubectl wait --for=condition=ready pod -l app=redis -n terraform-enterprise --timeout=300s
+```
+
+Verify Redis is running:
+```bash
+kubectl get pods -n terraform-enterprise -l app=redis
+kubectl logs -n terraform-enterprise -l app=redis
+```
+
+Basic connectivity test:
+```bash
+REDIS_POD=$(kubectl get pod -n terraform-enterprise -l app=redis -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -n terraform-enterprise $REDIS_POD -- \
+  sh -c 'redis-cli -a "$REDIS_PASSWORD" ping'
+```
+
+### Step 9: Create TFE Data PersistentVolumeClaim
+
+**Important:** This step is required but was missing from the original documentation.
+
+```bash
+kubectl apply -f manifests/tfe-pvc.yaml
+```
+
+Verify:
+```bash
+kubectl get pvc -n terraform-enterprise
+```
+
+### Step 10: Add HashiCorp Helm Repository
 
 ```bash
 helm repo add hashicorp https://helm.releases.hashicorp.com
@@ -241,7 +342,7 @@ Verify:
 helm search repo hashicorp/terraform-enterprise
 ```
 
-### Step 7: Deploy TFE with Helm
+### Step 11: Deploy TFE with Helm
 
 ```bash
 helm install tfe hashicorp/terraform-enterprise \
@@ -257,15 +358,60 @@ Monitor the deployment:
 kubectl get pods -n terraform-enterprise -w
 
 # Check TFE logs
-kubectl logs -n terraform-enterprise -l app.kubernetes.io/name=terraform-enterprise -f
+kubectl logs -n terraform-enterprise -l app=terraform-enterprise -f
 
 # Check all resources
 kubectl get all -n terraform-enterprise
 ```
 
-The deployment may take 5-10 minutes as TFE initializes the database and starts all services.
+**Note:** The initial deployment will fail due to a Helm chart bug with `secretKeyRefs`. This is expected and will be fixed in the next step.
 
-### Step 8: Configure Local DNS
+### Step 12: Create TFE Environment Secrets
+
+**Important:** Due to a bug in the HashiCorp Terraform Enterprise Helm chart (v1.6.5), the `secretKeyRefs` configuration doesn't work correctly. The chart creates an empty `terraform-enterprise-env-secrets` secret, which causes TFE to fail startup checks for missing license and Redis credentials.
+
+As a workaround, we manually create the secret with the required environment variables:
+
+```bash
+kubectl create secret generic terraform-enterprise-env-secrets -n terraform-enterprise \
+  --from-literal=TFE_LICENSE="$(kubectl get secret tfe-license -n terraform-enterprise -o jsonpath='{.data.license}' | base64 -d)" \
+  --from-literal=TFE_REDIS_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)" \
+  --from-literal=TFE_REDIS_SIDEKIQ_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)"
+```
+
+Verify the secret has the required data:
+```bash
+kubectl describe secret terraform-enterprise-env-secrets -n terraform-enterprise
+# Should show: Data section with 3 entries
+```
+
+### Step 13: Restart TFE Pod
+
+Restart the TFE pod so it picks up the newly created secret:
+
+```bash
+kubectl delete pod -n terraform-enterprise -l app=terraform-enterprise
+```
+
+Wait for the new pod to be created and start:
+```bash
+kubectl get pods -n terraform-enterprise -w
+```
+
+### Step 14: Wait for TFE to Be Ready
+
+TFE takes 5-10 minutes to fully initialize all services. Wait for the pod to become ready:
+
+```bash
+kubectl wait --for=condition=ready pod -l app=terraform-enterprise -n terraform-enterprise --timeout=600s
+```
+
+You can monitor the startup progress by watching the logs:
+```bash
+kubectl logs -f -n terraform-enterprise -l app=terraform-enterprise
+```
+
+### Step 15: Configure Local DNS
 
 Add `tfe.local` to your `/etc/hosts` file:
 
@@ -278,7 +424,7 @@ Verify:
 grep tfe.local /etc/hosts
 ```
 
-### Step 9: Set Up Port Forwarding
+### Step 16: Set Up Port Forwarding
 
 Start port forwarding to access TFE:
 
@@ -392,6 +538,46 @@ resources:
 
 ## Troubleshooting
 
+### Helm Chart Bug: Empty terraform-enterprise-env-secrets Secret
+
+**Symptom:** TFE pod crashes immediately after deployment with errors like:
+```
+[ERROR] terraform-enterprise: check failed: name=license err="error reading license value: no license detected"
+[ERROR] terraform-enterprise: check failed: name=redis err="NOAUTH Authentication required"
+```
+
+**Cause:** HashiCorp Terraform Enterprise Helm chart v1.6.5 has a bug where the `env.secretKeyRefs` configuration (when specified as an object/map in `values.yaml`) doesn't properly populate the `terraform-enterprise-env-secrets` secret. The Helm template renders environment variable entries with empty `name:` fields, causing Kubernetes to reject the deployment.
+
+**Solution:**
+1. Check if the secret is empty:
+```bash
+kubectl describe secret terraform-enterprise-env-secrets -n terraform-enterprise
+# If "Data" section shows 0 or is empty, the secret is affected
+```
+
+2. Delete the empty secret and recreate it manually:
+```bash
+kubectl delete secret terraform-enterprise-env-secrets -n terraform-enterprise
+
+kubectl create secret generic terraform-enterprise-env-secrets -n terraform-enterprise \
+  --from-literal=TFE_LICENSE="$(kubectl get secret tfe-license -n terraform-enterprise -o jsonpath='{.data.license}' | base64 -d)" \
+  --from-literal=TFE_REDIS_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)" \
+  --from-literal=TFE_REDIS_SIDEKIQ_PASSWORD="$(kubectl get secret redis-credentials -n terraform-enterprise -o jsonpath='{.data.password}' | base64 -d)"
+```
+
+3. Restart the TFE pod:
+```bash
+kubectl delete pod -n terraform-enterprise -l app=terraform-enterprise
+```
+
+4. Verify the secret has data:
+```bash
+kubectl describe secret terraform-enterprise-env-secrets -n terraform-enterprise
+# Should show "Data" section with 3 entries
+```
+
+**Note:** This workaround is required for Helm chart version 1.6.5. Future versions may fix this bug.
+
 ### TFE Pod Not Starting
 
 ```bash
@@ -399,15 +585,17 @@ resources:
 kubectl get pods -n terraform-enterprise
 
 # Describe pod for events
-kubectl describe pod -n terraform-enterprise -l app.kubernetes.io/name=terraform-enterprise
+kubectl describe pod -n terraform-enterprise -l app=terraform-enterprise
 
 # Check logs
-kubectl logs -n terraform-enterprise -l app.kubernetes.io/name=terraform-enterprise --tail=100
+kubectl logs -n terraform-enterprise -l app=terraform-enterprise --tail=100
 ```
 
 Common issues:
+- **Missing env-secrets:** See "Helm Chart Bug" section above
 - **License error:** Verify license secret is created correctly
 - **Database connection:** Ensure PostgreSQL is running and accessible
+- **Missing TFE PVC:** Ensure `tfe-data-pvc` was created before Helm install
 - **Resource constraints:** Check if Kind cluster has enough resources
 
 ### PostgreSQL Connection Issues

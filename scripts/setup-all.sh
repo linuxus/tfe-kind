@@ -100,11 +100,15 @@ echo "   5a. Creating PostgreSQL credentials..."
 ./manifests/secrets/create-postgres-secret.sh
 echo ""
 
-echo "   5b. Creating TLS certificates..."
+echo "   5b. Creating Redis credentials..."
+./manifests/secrets/create-redis-secret.sh
+echo ""
+
+echo "   5c. Creating TLS certificates..."
 ./manifests/secrets/create-tls-certs.sh
 echo ""
 
-echo "   5c. Creating TFE license secret..."
+echo "   5d. Creating TFE license secret..."
 ./manifests/secrets/create-license-secret.sh
 echo ""
 
@@ -135,8 +139,29 @@ kubectl apply -f manifests/tfe-pvc.yaml
 echo "   ✓ TFE PVC created"
 echo ""
 
+# Deploy Redis
+echo "8. Deploying Redis..."
+echo ""
+
+echo "   8a. Creating Redis PVC..."
+kubectl apply -f manifests/redis-pvc.yaml
+echo ""
+
+echo "   8b. Deploying Redis StatefulSet..."
+kubectl apply -f manifests/redis-statefulset.yaml
+echo ""
+
+echo "   8c. Creating Redis Service..."
+kubectl apply -f manifests/redis-service.yaml
+echo ""
+
+echo "   8d. Waiting for Redis to be ready..."
+kubectl wait --for=condition=ready pod -l app=redis -n ${NAMESPACE} --timeout=300s
+echo "   ✓ Redis is ready"
+echo ""
+
 # Add HashiCorp Helm repo
-echo "8. Setting up Helm repository..."
+echo "9. Setting up Helm repository..."
 if helm repo list | grep -q hashicorp; then
     echo "   ✓ HashiCorp Helm repo already added"
 else
@@ -148,7 +173,7 @@ echo "   ✓ Helm repos updated"
 echo ""
 
 # Deploy TFE using Helm
-echo "9. Deploying Terraform Enterprise (this will take 5-10 minutes)..."
+echo "10. Deploying Terraform Enterprise (this will take 5-10 minutes)..."
 echo ""
 
 if helm list -n ${NAMESPACE} | grep -q tfe; then
@@ -171,7 +196,7 @@ fi
 echo ""
 
 # Configure /etc/hosts
-echo "10. Configuring /etc/hosts..."
+echo "11. Configuring /etc/hosts..."
 if grep -q "tfe.local" /etc/hosts; then
     echo "    ✓ tfe.local already in /etc/hosts"
 else
