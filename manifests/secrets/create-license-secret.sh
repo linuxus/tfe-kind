@@ -6,18 +6,30 @@ set -e
 
 NAMESPACE="terraform-enterprise"
 SECRET_NAME="tfe-license"
-LICENSE_FILE="/Users/abdii/one-drive/Dev/Licenses/terraform.hclic"
+LICENSE_FILE="${TFE_LICENSE_PATH:-}"
 
 echo "========================================="
 echo "TFE License Secret Generator"
 echo "========================================="
 echo ""
 
+# Check if license path is provided
+if [ -z "${LICENSE_FILE}" ]; then
+    echo "❌ Error: TFE_LICENSE_PATH is not set."
+    echo ""
+    echo "Usage:"
+    echo "  export TFE_LICENSE_PATH=/path/to/terraform.hclic"
+    echo "  ./manifests/secrets/create-license-secret.sh"
+    echo ""
+    echo "You can obtain a license from https://developer.hashicorp.com/terraform/enterprise"
+    exit 1
+fi
+
 # Check if license file exists
 if [ ! -f "${LICENSE_FILE}" ]; then
     echo "❌ Error: License file not found at ${LICENSE_FILE}"
     echo ""
-    echo "Please ensure the license file exists at the specified location."
+    echo "Please verify the TFE_LICENSE_PATH is correct."
     exit 1
 fi
 

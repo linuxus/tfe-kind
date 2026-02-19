@@ -41,7 +41,11 @@ This repository provides a production-ready deployment of Terraform Enterprise o
 - **Disk Space:** 50GB+ free space
 
 ### TFE License
-- Valid Terraform Enterprise license file: `/Users/abdii/one-drive/Dev/Licenses/terraform.hclic`
+- A valid Terraform Enterprise license file (`.hclic`). Obtain one from [HashiCorp](https://developer.hashicorp.com/terraform/enterprise).
+- Set the path before running any setup scripts:
+  ```bash
+  export TFE_LICENSE_PATH=/path/to/terraform.hclic
+  ```
 
 ### Verify Prerequisites
 ```bash
@@ -113,7 +117,8 @@ kubectl apply -f manifests/namespace.yaml
 # 6. Create TLS certificates
 ./manifests/secrets/create-tls-certs.sh
 
-# 7. Create license secret
+# 7. Create license secret (set TFE_LICENSE_PATH first)
+export TFE_LICENSE_PATH=/path/to/terraform.hclic
 ./manifests/secrets/create-license-secret.sh
 
 # 8. Deploy PostgreSQL
@@ -253,7 +258,11 @@ chmod +x manifests/secrets/create-license-secret.sh
 ./manifests/secrets/create-license-secret.sh
 ```
 
-This reads your license file from `/Users/abdii/one-drive/Dev/Licenses/terraform.hclic` and creates a Kubernetes secret.
+This reads the license file from the path specified in `TFE_LICENSE_PATH` and creates a Kubernetes secret. Make sure the env var is set before running:
+```bash
+export TFE_LICENSE_PATH=/path/to/terraform.hclic
+./manifests/secrets/create-license-secret.sh
+```
 
 Verify:
 ```bash
