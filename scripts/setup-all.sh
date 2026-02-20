@@ -723,6 +723,16 @@ print_summary() {
     echo -e "${BOLD}Access:${NC}"
     echo -e "  URL:             ${GREEN}https://tfe.localtest.me:${LOCAL_PORT}${NC}"
     echo -e "  DNS:             tfe.localtest.me resolves to 127.0.0.1 (no /etc/hosts needed)"
+
+    # Retrieve initial admin creation token
+    local iact
+    iact=$(kubectl exec -n "$TFE_NAMESPACE" deploy/terraform-enterprise -- cat /var/run/terraform-enterprise/token.txt 2>/dev/null || echo "")
+    if [ -n "$iact" ]; then
+        echo ""
+        echo -e "${BOLD}Initial Admin Setup:${NC}"
+        echo -e "  Create admin:    ${GREEN}https://tfe.localtest.me:${LOCAL_PORT}/admin/account/new?token=${iact}${NC}"
+        echo -e "  Token:           ${iact}"
+    fi
     echo ""
     echo -e "${BOLD}Kubernetes:${NC}"
     echo -e "  Cluster:         ${GREEN}kind-${KIND_CLUSTER_NAME}${NC}"
