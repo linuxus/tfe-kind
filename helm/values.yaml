@@ -10,7 +10,7 @@ global:
 image:
   repository: "images.releases.hashicorp.com"
   name: "hashicorp/terraform-enterprise"
-  tag: "v202507-1"
+  tag: "1.0.3"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
