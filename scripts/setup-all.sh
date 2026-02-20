@@ -4,7 +4,8 @@
 # TFE on Kind - Complete Setup Script
 # =============================================================================
 # Deploys HashiCorp Terraform Enterprise on a Kind Kubernetes cluster with
-# PostgreSQL, Redis, and all required secrets/configuration.
+# PostgreSQL, Redis, MinIO (S3-compatible object storage), and all required
+# secrets/configuration.
 #
 # Prerequisites:
 #   - Docker installed and running
@@ -28,6 +29,8 @@
 #   TFE_LICENSE_PATH    - Path to .hclic file (required, no default)
 #   POSTGRES_PASSWORD   - PostgreSQL password (default: terraform_password_change_me)
 #   REDIS_PASSWORD      - Redis password (default: redis_password_change_me)
+#   MINIO_ROOT_USER     - MinIO root user (default: minioadmin)
+#   MINIO_ROOT_PASSWORD - MinIO root password (default: minioadmin_change_me)
 #   HELM_TIMEOUT        - Helm install timeout (default: 15m)
 #   LOCAL_PORT          - Local port for TFE access (default: 8443)
 # =============================================================================
@@ -45,6 +48,9 @@ TFE_NAMESPACE="${TFE_NAMESPACE:-terraform-enterprise}"
 TFE_LICENSE_PATH="${TFE_LICENSE_PATH:-}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-terraform_password_change_me}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-redis_password_change_me}"
+MINIO_ROOT_USER="${MINIO_ROOT_USER:-minioadmin}"
+MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minioadmin_change_me}"
+TFE_ENCRYPTION_PASSWORD="${TFE_ENCRYPTION_PASSWORD:-$(openssl rand -hex 16)}"
 HELM_TIMEOUT="${HELM_TIMEOUT:-15m}"
 LOCAL_PORT="${LOCAL_PORT:-8443}"
 
@@ -121,6 +127,8 @@ usage() {
     echo "    TFE_LICENSE_PATH        Path to .hclic file (required)"
     echo "    POSTGRES_PASSWORD       PostgreSQL password (default: terraform_password_change_me)"
     echo "    REDIS_PASSWORD          Redis password (default: redis_password_change_me)"
+    echo "    MINIO_ROOT_USER         MinIO root user (default: minioadmin)"
+    echo "    MINIO_ROOT_PASSWORD     MinIO root password (default: minioadmin_change_me)"
     echo "    HELM_TIMEOUT            Helm install timeout (default: 15m)"
     echo "    LOCAL_PORT              Local port for TFE access (default: 8443)"
     echo ""
@@ -280,7 +288,10 @@ teardown() {
         kubectl delete -f "$PROJECT_DIR/manifests/postgres-deployment.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
         kubectl delete -f "$PROJECT_DIR/manifests/postgres-service.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
         kubectl delete -f "$PROJECT_DIR/manifests/postgres-pvc.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
-        kubectl delete -f "$PROJECT_DIR/manifests/tfe-pvc.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
+        kubectl delete job minio-create-bucket -n "$TFE_NAMESPACE" 2>/dev/null || true
+        kubectl delete -f "$PROJECT_DIR/manifests/minio-statefulset.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
+        kubectl delete -f "$PROJECT_DIR/manifests/minio-service.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
+        kubectl delete -f "$PROJECT_DIR/manifests/minio-pvc.yaml" -n "$TFE_NAMESPACE" 2>/dev/null || true
 
         log_info "Deleting remaining PVCs..."
         kubectl delete pvc --all -n "$TFE_NAMESPACE" 2>/dev/null || true
@@ -423,6 +434,27 @@ create_secrets() {
         -n "$TFE_NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
     log_success "TFE license secret ready"
+
+    # 5e. MinIO credentials
+    log_info "Creating MinIO credentials..."
+    kubectl create secret generic minio-credentials \
+        --from-literal=root-user="$MINIO_ROOT_USER" \
+        --from-literal=root-password="$MINIO_ROOT_PASSWORD" \
+        -n "$TFE_NAMESPACE" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    log_success "MinIO credentials ready"
+
+    # 5f. Image pull secret for images.releases.hashicorp.com
+    log_info "Creating image pull secret for HashiCorp registry..."
+    local license_content
+    license_content=$(cat "$TFE_LICENSE_PATH")
+    kubectl create secret docker-registry terraform-enterprise \
+        --docker-server=images.releases.hashicorp.com \
+        --docker-username=terraform \
+        --docker-password="$license_content" \
+        -n "$TFE_NAMESPACE" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    log_success "Image pull secret ready"
 }
 
 # 6. Deploy PostgreSQL
@@ -438,17 +470,9 @@ deploy_postgres() {
     log_success "PostgreSQL is ready"
 }
 
-# 7. Create TFE PVC
-create_tfe_pvc() {
-    log_step "Step 7: Creating TFE Data PVC"
-
-    kubectl apply -f "$PROJECT_DIR/manifests/tfe-pvc.yaml"
-    log_success "TFE data PVC ready"
-}
-
-# 8. Deploy Redis
+# 7. Deploy Redis
 deploy_redis() {
-    log_step "Step 8: Deploying Redis"
+    log_step "Step 7: Deploying Redis"
 
     kubectl apply -f "$PROJECT_DIR/manifests/redis-pvc.yaml"
     kubectl apply -f "$PROJECT_DIR/manifests/redis-statefulset.yaml"
@@ -457,6 +481,26 @@ deploy_redis() {
     log_info "Waiting for Redis to be ready..."
     kubectl wait --for=condition=ready pod -l app=redis -n "$TFE_NAMESPACE" --timeout=300s
     log_success "Redis is ready"
+}
+
+# 8. Deploy MinIO (S3-compatible object storage)
+deploy_minio() {
+    log_step "Step 8: Deploying MinIO"
+
+    kubectl apply -f "$PROJECT_DIR/manifests/minio-pvc.yaml"
+    kubectl apply -f "$PROJECT_DIR/manifests/minio-statefulset.yaml"
+    kubectl apply -f "$PROJECT_DIR/manifests/minio-service.yaml"
+
+    log_info "Waiting for MinIO to be ready..."
+    kubectl wait --for=condition=ready pod -l app=minio -n "$TFE_NAMESPACE" --timeout=300s
+    log_success "MinIO is ready"
+
+    # Create the TFE bucket
+    log_info "Creating MinIO bucket 'tfe'..."
+    kubectl delete job minio-create-bucket -n "$TFE_NAMESPACE" 2>/dev/null || true
+    kubectl apply -f "$PROJECT_DIR/manifests/minio-create-bucket-job.yaml"
+    kubectl wait --for=condition=complete job/minio-create-bucket -n "$TFE_NAMESPACE" --timeout=120s
+    log_success "MinIO bucket 'tfe' ready"
 }
 
 # 9. Setup Helm repo
@@ -509,12 +553,15 @@ create_env_secrets_workaround() {
         --from-literal=TFE_DATABASE_PASSWORD="$POSTGRES_PASSWORD" \
         --from-literal=TFE_REDIS_PASSWORD="$REDIS_PASSWORD" \
         --from-literal=TFE_REDIS_SIDEKIQ_PASSWORD="$REDIS_PASSWORD" \
+        --from-literal=TFE_ENCRYPTION_PASSWORD="$TFE_ENCRYPTION_PASSWORD" \
+        --from-literal=TFE_OBJECT_STORAGE_S3_ACCESS_KEY_ID="$MINIO_ROOT_USER" \
+        --from-literal=TFE_OBJECT_STORAGE_S3_SECRET_ACCESS_KEY="$MINIO_ROOT_PASSWORD" \
         -n "$TFE_NAMESPACE"
     log_success "Env-secrets workaround applied"
 
     # Restart TFE pod to pick up the new secret
     log_info "Restarting TFE pod..."
-    kubectl delete pod -l app.kubernetes.io/name=terraform-enterprise -n "$TFE_NAMESPACE" 2>/dev/null || true
+    kubectl delete pod -l app=terraform-enterprise -n "$TFE_NAMESPACE" 2>/dev/null || true
     log_success "TFE pod restarted"
 }
 
@@ -526,7 +573,7 @@ wait_for_tfe() {
     log_info "Waiting up to 600s for TFE pod to be ready..."
 
     kubectl wait --for=condition=ready pod \
-        -l app.kubernetes.io/name=terraform-enterprise \
+        -l app=terraform-enterprise \
         -n "$TFE_NAMESPACE" \
         --timeout=600s
     log_success "TFE is ready"
@@ -558,8 +605,17 @@ validate_health() {
         all_healthy=false
     fi
 
+    local minio_running
+    minio_running=$(kubectl get pods -n "$TFE_NAMESPACE" -l app=minio --no-headers 2>/dev/null | grep -c "Running" || echo "0")
+    if [ "$minio_running" -ge 1 ]; then
+        log_success "MinIO: Running"
+    else
+        log_error "MinIO: Not Running"
+        all_healthy=false
+    fi
+
     local tfe_running
-    tfe_running=$(kubectl get pods -n "$TFE_NAMESPACE" -l app.kubernetes.io/name=terraform-enterprise --no-headers 2>/dev/null | grep -c "Running" || echo "0")
+    tfe_running=$(kubectl get pods -n "$TFE_NAMESPACE" -l app=terraform-enterprise --no-headers 2>/dev/null | grep -c "Running" || echo "0")
     if [ "$tfe_running" -ge 1 ]; then
         log_success "TFE: Running"
     else
@@ -582,7 +638,7 @@ validate_health() {
 
     # Check services
     log_info "Checking services..."
-    for svc in postgres redis; do
+    for svc in postgres redis minio; do
         if kubectl get svc "$svc" -n "$TFE_NAMESPACE" &>/dev/null; then
             log_success "Service '$svc': exists"
         else
@@ -593,7 +649,7 @@ validate_health() {
 
     # Check critical secrets
     log_info "Checking secrets..."
-    for secret in postgres-credentials redis-credentials tfe-tls tfe-license terraform-enterprise-env-secrets; do
+    for secret in postgres-credentials redis-credentials minio-credentials tfe-tls tfe-license terraform-enterprise terraform-enterprise-env-secrets; do
         if kubectl get secret "$secret" -n "$TFE_NAMESPACE" &>/dev/null; then
             log_success "Secret '$secret': exists"
         else
@@ -632,7 +688,7 @@ start_port_forward() {
 
     # Find the TFE service
     local tfe_svc
-    tfe_svc=$(kubectl get svc -n "$TFE_NAMESPACE" -l app.kubernetes.io/name=terraform-enterprise -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    tfe_svc=$(kubectl get svc -n "$TFE_NAMESPACE" -l app=terraform-enterprise -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
     if [ -z "$tfe_svc" ]; then
         # Fallback: look for any service with tfe/terraform-enterprise in the name
         tfe_svc=$(kubectl get svc -n "$TFE_NAMESPACE" --no-headers 2>/dev/null | grep -i -E "tfe|terraform-enterprise" | awk '{print $1}' | head -1)
@@ -682,7 +738,7 @@ print_summary() {
     echo ""
     echo -e "${BOLD}Useful Commands:${NC}"
     echo -e "  Watch pods:      kubectl get pods -n ${TFE_NAMESPACE} -w"
-    echo -e "  TFE logs:        kubectl logs -f -l app.kubernetes.io/name=terraform-enterprise -n ${TFE_NAMESPACE}"
+    echo -e "  TFE logs:        kubectl logs -f -l app=terraform-enterprise -n ${TFE_NAMESPACE}"
     echo -e "  Port-forward:    ./scripts/port-forward.sh"
     echo -e "  Status:          ./scripts/setup-all.sh --status"
     echo -e "  Teardown:        ./scripts/setup-all.sh --teardown"
@@ -720,8 +776,8 @@ main() {
     create_namespace
     create_secrets
     deploy_postgres
-    create_tfe_pvc
     deploy_redis
+    deploy_minio
     setup_helm_repo
     deploy_tfe
     create_env_secrets_workaround

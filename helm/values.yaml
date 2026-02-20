@@ -10,7 +10,7 @@ global:
 image:
   repository: "images.releases.hashicorp.com"
   name: "hashicorp/terraform-enterprise"
-  tag: "v202410-1"
+  tag: "v202507-1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -22,18 +22,11 @@ replicaCount: 1
 # Service configuration
 service:
   type: ClusterIP
-  port: 443
-  targetPort: 443
   annotations: {}
 
 # TFE application settings
 tfe:
   hostname: "tfe.localtest.me"
-  
-  # Operational mode
-  operationalMode: "external"
-  
-  # Metrics
   metrics:
     enabled: true
 
@@ -71,8 +64,18 @@ readinessProbe:
   timeoutSeconds: 5
   failureThreshold: 3
 
-# Security context
-podSecurityContext:
+# Security context — TFE bootstrap needs capabilities to set up directories
+container:
+  securityContext:
+    capabilities:
+      add:
+        - CHOWN
+        - DAC_OVERRIDE
+        - FOWNER
+        - SETGID
+        - SETUID
+
+securityContext:
   fsGroup: 1000
 
 # Service account
@@ -98,29 +101,56 @@ env:
     TFE_DATABASE_NAME: "terraform"
     TFE_DATABASE_USER: "terraform"
     TFE_DATABASE_PARAMETERS: "sslmode=disable"
-    TFE_DISK_PATH: "/var/lib/terraform-enterprise"
-    TFE_OPERATIONAL_MODE: "external"
     TFE_LOG_LEVEL: "info"
     TFE_VAULT_DISABLE_MLOCK: "true"
-    TFE_OBJECT_STORAGE_TYPE: "disk"
+    # Object storage — MinIO as in-cluster S3-compatible store
+    TFE_OBJECT_STORAGE_TYPE: "s3"
+    TFE_OBJECT_STORAGE_S3_BUCKET: "tfe"
+    TFE_OBJECT_STORAGE_S3_REGION: "us-east-1"
+    TFE_OBJECT_STORAGE_S3_ENDPOINT: "http://minio.terraform-enterprise.svc.cluster.local:9000"
+    TFE_OBJECT_STORAGE_S3_USE_INSTANCE_PROFILE: "false"
+    # Redis
     TFE_REDIS_HOST: "redis.terraform-enterprise.svc.cluster.local:6379"
     TFE_REDIS_USE_AUTH: "true"
     TFE_REDIS_SIDEKIQ_HOST: "redis.terraform-enterprise.svc.cluster.local:6379"
     TFE_REDIS_SIDEKIQ_USE_AUTH: "true"
-    TFE_RUN_PIPELINE_DRIVER: "docker"
   secretKeyRefs: {}
+
 tls:
   certificateSecret: "tfe-tls"
   certMountPath: "/etc/ssl/private/terraform-enterprise/cert.pem"
   keyMountPath: "/etc/ssl/private/terraform-enterprise/key.pem"
 
-# Extra volumes to mount the TFE data PVC
-extraVolumes:
-  - name: tfe-data
-    persistentVolumeClaim:
-      claimName: tfe-data-pvc
+# Init container to prep directories with correct permissions
+initContainers:
+  - name: prep-dirs
+    image: busybox:latest
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/cache/tfe-task-worker/terraform
+        chown -R 1000:1000 /var/cache/tfe-task-worker
+        chmod -R 775 /var/cache/tfe-task-worker
+        chmod 1777 /tmp
+    securityContext:
+      runAsUser: 0
+    volumeMounts:
+      - name: task-worker-cache
+        mountPath: /var/cache/tfe-task-worker
+      - name: tmp-dir
+        mountPath: /tmp
 
-# Mount the data volume to the TFE container
+# Extra volumes
+extraVolumes:
+  - name: task-worker-cache
+    emptyDir: {}
+  - name: tmp-dir
+    emptyDir: {}
+
+# Extra volume mounts
 extraVolumeMounts:
-  - name: tfe-data
-    mountPath: /var/lib/terraform-enterprise
+  - name: task-worker-cache
+    mountPath: /var/cache/tfe-task-worker
+  - name: tmp-dir
+    mountPath: /tmp
